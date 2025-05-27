@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const AZURE_API_KEY = Deno.env.get("AZURE_OPENAI_KEY");
 const AZURE_DEPLOYMENT_NAME = "gpt-4.1-mini";
-const AZURE_ENDPOINT = "https://<your-resource-name>.openai.azure.com";
+const AZURE_ENDPOINT = "https://chatbot-api-western.openai.azure.com";
 const AZURE_API_VERSION = "2024-04-01-preview";
 
 serve(async (req: Request): Promise<Response> => {
