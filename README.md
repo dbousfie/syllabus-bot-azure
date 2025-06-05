@@ -33,16 +33,16 @@ How to Use
 * Click **Create Project**
 
 4. Add Environment Variables
-   In the Deno project Settings → Environment Variables, add:
+In the Deno project Settings → Environment Variables, add:
 
-```
-OPENAI_API_KEY         = your OpenAI API key
+
+AZURE_OPENAI_KEY       = your Azure OpenAI API key
+AZURE_ENDPOINT         = https://your-resource-name.openai.azure.com
 SYLLABUS_LINK          = a public link to the syllabus or course webpage
 QUALTRICS_API_TOKEN    = (optional)
 QUALTRICS_SURVEY_ID    = (optional)
 QUALTRICS_DATACENTER   = (optional, e.g., uwo.eu)
-```
-
+These values are used by the backend to query Azure OpenAI and optionally log responses.
 These values are used by the backend to query OpenAI and optionally log responses.
 
 5. Update the Frontend (index.html)
