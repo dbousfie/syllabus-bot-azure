@@ -6,7 +6,8 @@ const QUALTRICS_SURVEY_ID = Deno.env.get("QUALTRICS_SURVEY_ID");
 const QUALTRICS_DATACENTER = Deno.env.get("QUALTRICS_DATACENTER");
 const SYLLABUS_LINK = Deno.env.get("SYLLABUS_LINK") || "";
 
-const AZURE_DEPLOYMENT_NAME = "gpt-4.1-mini";
+// default to gpt-4.1-mini unless overridden
+const AZURE_DEPLOYMENT_NAME = Deno.env.get("AZURE_DEPLOYMENT_NAME") || "gpt-4.1-mini";
 const AZURE_ENDPOINT = "https://chatbot-api-western.openai.azure.com";
 const AZURE_API_VERSION = "2024-04-01-preview";
 
@@ -42,19 +43,9 @@ serve(async (req: Request): Promise<Response> => {
   );
 
   const messages = [
-    {
-      role: "system",
-      content:
-        "You are an accurate assistant. Always include a source URL if possible.",
-    },
-    {
-      role: "system",
-      content: `Here is important context from syllabus.txt:\n${syllabus}`,
-    },
-    {
-      role: "user",
-      content: body.query,
-    },
+    { role: "system", content: "You are an accurate assistant. Always include a source URL if possible." },
+    { role: "system", content: `Here is important context from syllabus.txt:\n${syllabus}` },
+    { role: "user", content: body.query },
   ];
 
   const azureResponse = await fetch(
@@ -67,25 +58,18 @@ serve(async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         messages,
+        max_tokens: 1500, // cap for safety
       }),
     }
   );
 
   const azureJson = await azureResponse.json();
-  const baseResponse =
-    azureJson?.choices?.[0]?.message?.content || "No response from Azure OpenAI";
+  const baseResponse = azureJson?.choices?.[0]?.message?.content || "No response from Azure OpenAI";
   const result = `${baseResponse}\n\nThere may be errors in my responses; always refer to the course web page: ${SYLLABUS_LINK}`;
 
   let qualtricsStatus = "Qualtrics not called";
-
   if (QUALTRICS_API_TOKEN && QUALTRICS_SURVEY_ID && QUALTRICS_DATACENTER) {
-    const qualtricsPayload = {
-      values: {
-        responseText: result,
-        queryText: body.query,
-      },
-    };
-
+    const qualtricsPayload = { values: { responseText: result, queryText: body.query } };
     const qt = await fetch(
       `https://${QUALTRICS_DATACENTER}.qualtrics.com/API/v3/surveys/${QUALTRICS_SURVEY_ID}/responses`,
       {
@@ -97,14 +81,10 @@ serve(async (req: Request): Promise<Response> => {
         body: JSON.stringify(qualtricsPayload),
       }
     );
-
     qualtricsStatus = `Qualtrics status: ${qt.status}`;
   }
 
   return new Response(`${result}\n<!-- ${qualtricsStatus} -->`, {
-    headers: {
-      "Content-Type": "text/plain",
-      "Access-Control-Allow-Origin": "*",
-    },
+    headers: { "Content-Type": "text/plain", "Access-Control-Allow-Origin": "*" },
   });
 });
