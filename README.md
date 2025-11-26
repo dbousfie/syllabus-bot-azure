@@ -38,7 +38,7 @@ A modular, copyable bot for answering course or assignment-related questions usi
 In the Deno project Settings → Environment Variables, add:
 
 ```
-AZURE_OPENAI_KEY       = your Azure OpenAI API key  
+AZURE_OPENAI_KEY      = your Azure OpenAI API key  
 SYLLABUS_LINK          = a public link to the syllabus or course webpage  
 QUALTRICS_API_TOKEN    = (optional)  
 QUALTRICS_SURVEY_ID    = (optional)  
