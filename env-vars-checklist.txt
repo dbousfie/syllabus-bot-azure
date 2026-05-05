@@ -1,0 +1,41 @@
+Cloudflare Worker Env Vars — Azure Variant Checklist
+=====================================================
+
+Where: dash.cloudflare.com → your worker → Settings → Variables and Secrets
+Tip:   Click "Edit" (next to "+ Add") to set multiple at once.
+
+Name                    Type      Notes
+----------------------  --------  ------------------------------------------------
+AZURE_OPENAI_KEY        Secret    Azure portal → your resource → Keys and Endpoint
+AZURE_ENDPOINT          Text      https://chatbot-api-western.openai.azure.com
+AZURE_DEPLOYMENT_NAME   Text      gpt-4.1-mini  (deployment name in Azure Studio)
+AZURE_API_VERSION       Text      2024-04-01-preview  (optional, defaults if unset)
+QUALTRICS_API_TOKEN     Secret    from Qualtrics → Account Settings → API
+QUALTRICS_SURVEY_ID     Text      SV_... (from the survey URL)
+QUALTRICS_DATACENTER    Text      uwo.eu
+COURSE_PAGE_URL         Text      https://westernu.brightspace.com/d2l/...
+SYLLABUS_URL            Text      https://raw.githubusercontent.com/dbousfie/<REPO>/main/syllabus.md
+
+
+Per-bot values to update:
+  - SYLLABUS_URL: change <REPO> to this bot's repo name (and .md/.txt as needed)
+  - COURSE_PAGE_URL: the Brightspace link for this course
+  - AZURE_DEPLOYMENT_NAME: only if this bot uses a different deployment
+
+Same across all Azure bots (paste from this file):
+  - AZURE_OPENAI_KEY
+  - AZURE_ENDPOINT
+  - AZURE_API_VERSION
+  - QUALTRICS_API_TOKEN
+  - QUALTRICS_DATACENTER
+  - (QUALTRICS_SURVEY_ID may also be shared if you reuse one survey)
+
+
+Reminder for index.html:
+  Update WORKER_URL near the top of the script to:
+  https://<this-bot-name>.danbousfield.workers.dev/
+
+
+Reminder for Qualtrics:
+  Survey must have three embedded data fields:
+    queryText, responseText, feedback

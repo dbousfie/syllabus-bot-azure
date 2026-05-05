@@ -1,100 +1,123 @@
-# Syllabus Bot Template
+# Syllabus Bot (Azure OpenAI variant)
 
-A modular, copyable bot for answering course or assignment-related questions using Azure OpenAI. Designed to embed into Brightspace and optionally log responses to Qualtrics.
+Same as the standard syllabus bot template, but uses Azure OpenAI instead of OpenAI's public API. Use this when course content involves student input that needs to stay within institutional infrastructure.
 
-## What It Does
+## How it works
 
-* Accepts free-text questions
-* Uses Azure OpenAI to generate responses based on `syllabus.txt`
-* Optionally logs responses to a Qualtrics survey
-* Can be embedded in Brightspace or hosted via GitHub Pages
+Three pieces, in two places:
 
-## How to Use
+- **Frontend** (`index.html`) — hosted on GitHub Pages. Students see a web page, type a question, click submit, get an answer, and rate it 👍 or 👎.
+- **Backend** (`worker.js`) — runs on Cloudflare Workers. Receives each request, fetches the syllabus from this GitHub repo at runtime, sends it to Azure OpenAI with the question, returns the answer, and logs to Qualtrics.
+- **Content** (`syllabus.md` or `syllabus.txt`) — lives in this repo. The worker fetches a fresh copy on every request, so editing the syllabus and committing immediately updates what the bot knows. No redeploy needed.
 
-### 1. Create Your Own Copy
+The frontend, content workflow, and Qualtrics logging are identical to the OpenAI template. Only the LLM call differs.
 
-* Go to [https://github.com/dbousfie/syllabus-bot-template](https://github.com/dbousfie/syllabus-bot-template)
-* Click **Use this template**
-* Name your new repo (e.g., `syllabus-bot-3210`, `paragraph-marker`)
+## Setup
 
-### 2. Replace the Syllabus Content
+### 1. Create your repo
+Use this template on GitHub. Name it after your course.
 
-* Open `syllabus.txt`
-* Replace its contents with your course material or grading criteria
-* This file is sent with every query to provide context to the AI
+### 2. Edit the syllabus file
+Replace the contents with your course policies, grading criteria, deadlines, readings — anything you want the bot to know.
 
-### 3. Deploy Backend to Deno
+### 3. Deploy the worker
+1. dash.cloudflare.com → **Compute (Workers)** → **Create** → **Start with Hello World!**
+2. Name your worker (e.g., `3210azurebot`).
+3. After it deploys, click **Edit code**.
+4. Ctrl+A → Delete (the editor must be completely empty before pasting), then paste `worker.js` from this repo.
+5. Click **Deploy**.
 
-* Go to [https://dash.deno.com](https://dash.deno.com) and sign up or log in using your GitHub account
-* Click **+ New Project** → **Import from GitHub**
-* Select your new repo
-* Set **entry point** to: `main.ts`
-* Name the project (this determines the public URL)
-* Set **production branch** to: `main`
-* Click **Create Project**
+Verify: visit your worker URL in a browser. You should see "Method Not Allowed" — that's correct. If you see "Hello World!", the paste didn't take; redo step 4.
 
-### 4. Add Environment Variables
+### 4. Set environment variables
 
-In the Deno project Settings → Environment Variables, add:
+In the worker's page → **Settings** → **Variables and Secrets** → **+ Add** (or click **Edit** to set multiple at once):
 
+| Name | Type | Required | Value |
+|---|---|---|---|
+| `AZURE_OPENAI_KEY` | Secret | yes | Your Azure OpenAI API key |
+| `AZURE_ENDPOINT` | Text | yes | e.g., `https://chatbot-api-western.openai.azure.com` |
+| `AZURE_DEPLOYMENT_NAME` | Text | yes | The deployment name in your Azure resource (e.g., `gpt-4.1-mini`) |
+| `AZURE_API_VERSION` | Text | optional | Defaults to `2024-04-01-preview` |
+| `SYLLABUS_URL` | Text | yes | Raw GitHub URL of this repo's syllabus file |
+| `COURSE_PAGE_URL` | Text | yes | Public course web page; appears at the bottom of every response |
+| `QUALTRICS_API_TOKEN` | Secret | for logging | |
+| `QUALTRICS_SURVEY_ID` | Text | for logging | starts with `SV_` |
+| `QUALTRICS_DATACENTER` | Text | for logging | e.g., `uwo.eu` |
+
+For `SYLLABUS_URL`: open the syllabus file in your repo on GitHub, click the **Raw** button, copy the URL from your browser. The worker accepts `.md` or `.txt` — whatever the URL points to.
+
+**Where to find Azure values:**
+- `AZURE_ENDPOINT` and `AZURE_DEPLOYMENT_NAME` come from your Azure OpenAI resource. In the Azure portal: your resource → "Go to Azure OpenAI Studio" → Deployments → see the deployment name. The endpoint is on your resource's "Keys and Endpoint" page.
+- `AZURE_OPENAI_KEY` is on the same "Keys and Endpoint" page (Key 1 or Key 2).
+
+### 5. Configure Qualtrics
+
+Add three embedded data fields to your Qualtrics survey:
+- `queryText`
+- `responseText`
+- `feedback`
+
+Each question creates one Qualtrics row (with `feedback` empty). Each thumbs-click creates a second row with the same query/response and a `feedback` value of `helpful` or `not_helpful`. Filter for `feedback = not_helpful` to find responses that need a syllabus fix.
+
+### 6. Point the frontend at your worker
+
+In `index.html`, near the top of the `<script>` block:
+```js
+const WORKER_URL = "https://<your-name>.<your-subdomain>.workers.dev/";
 ```
-AZURE_OPENAI_KEY      = your Azure OpenAI API key  
-SYLLABUS_LINK          = a public link to the syllabus or course webpage  
-QUALTRICS_API_TOKEN    = (optional)  
-QUALTRICS_SURVEY_ID    = (optional)  
-QUALTRICS_DATACENTER   = (optional, e.g., uwo.eu)  
-```
+Set this to your Cloudflare worker URL. Commit.
 
-### 5. Update the Frontend (index.html)
+### 7. Publish the frontend
+- Repo → **Settings** → **Pages**
+- Branch: `main`, Folder: `/ (root)` → **Save**
+- Wait 1–2 minutes for the first build, then visit the published URL
+- For Brightspace: paste `brightspace.html` as a content item
 
-Open `index.html` and update this line:
+## Day-to-day editing
 
-```javascript
-fetch("https://your-bot-name.deno.dev/", {
-```
+Same as the standard template:
 
-Replace the placeholder with the URL from your deployed Deno backend (e.g., `https://paragraph-marker.deno.dev/`).
+| Change | What to do | Live immediately? |
+|---|---|---|
+| Edit syllabus content | Edit syllabus file in GitHub, commit | Yes, on next request |
+| Update the course web link | Edit `COURSE_PAGE_URL` in Cloudflare dashboard | Yes |
+| Switch Azure deployment | Edit `AZURE_DEPLOYMENT_NAME` in dashboard | Yes |
+| Rotate the API key | Edit the `AZURE_OPENAI_KEY` Secret in dashboard | Yes |
+| Change frontend appearance | Edit `index.html` on GitHub | After GitHub Pages rebuilds (1–2 min) and a hard refresh |
+| Change prompt or backend logic | Edit `worker.js` in Cloudflare's editor → click **Deploy** | After Deploy click |
 
-### 6. Deploy GitHub Pages (Frontend Hosting)
+## Reading feedback in Qualtrics
 
-* Go to your new GitHub repo → **Settings → Pages**
-* Set **Branch** to `main`, **Folder** to `/ (root)`
-* Click **Save**
-* GitHub will display a live URL: `https://yourusername.github.io/yourbot/`
+Filter the survey for `feedback = not_helpful` to see responses students flagged as bad. Each row shows the query that produced the response and the response text, useful for identifying:
+- Gaps in your syllabus (info wasn't there)
+- Confusing language students asked about
+- Outdated dates or policies
 
-### 7. (Optional) Use brightspace.html for LMS Embedding
+## Why use this variant instead of the standard one
 
-* Copy `brightspace.html` into Brightspace as an HTML content item or widget
-* You can also style it using Brightspace's Lato font or CSS styles
+The standard template uses OpenAI's public API. Use this Azure variant when:
+- Course activities involve student-generated content that should stay within institutional infrastructure
+- You need the procurement / data-handling agreements that come with your institution's Azure deployment
+- You want to use Azure-specific deployments (different model availability, fine-tuned versions, etc.)
+
+For policy/syllabus questions where students aren't submitting personal content, the standard OpenAI template is simpler and equally good.
 
 ## Notes
 
-* Brightspace loads bots in an iframe — CORS headers are handled automatically
-* Each deployed bot has its own backend; the fetch URL must match
+- **CORS** is handled by the worker, so iframe and cross-domain calls from Brightspace and GitHub Pages work without extra config.
+- **Fetch caching is disabled** for syllabus reads (`cache: "no-store"`), so syllabus edits appear immediately.
+- **Per-bot isolation:** each bot is its own Cloudflare Worker with its own env vars. Azure keys can differ per bot for cost tracking.
+- **Token cap:** Responses are limited to 1500 tokens. Increase `max_tokens` in `worker.js` if needed (then redeploy).
+- **Free tier:** Cloudflare Workers free tier is 100,000 requests/day. Azure OpenAI billing is separate and depends on your institution's agreement.
+- **Feedback clicks are free:** thumbs-up/down submissions don't call Azure OpenAI, so they don't incur LLM costs.
 
-## Qualtrics Logging Setup (Optional)
-
-If using Qualtrics, make sure your survey contains embedded data fields:
-
-```
-responseText  
-queryText  
-```
-
-These will be populated by the bot. Responses will include a hidden HTML comment like:
-`<!-- Qualtrics status: 200 -->`
-
-## Files in This Repo
-
-* `index.html` - Main public interface
-* `brightspace.html` - LMS-friendly iframe wrapper
-* `main.ts` - Backend Deno script
-* `syllabus.txt` - Syllabus or grading criteria context
-* `README.md` - This file
+## Files
+- `index.html` — public interface with feedback buttons
+- `brightspace.html` — LMS iframe wrapper
+- `worker.js` — Cloudflare Workers backend (running copy lives in Cloudflare; this is the backup)
+- `syllabus.md` (or `syllabus.txt`) — course content used as context
+- `README.md` — this file
 
 ## License
-
-© Dan Bousfield. Licensed under Creative Commons Attribution 4.0
-[https://creativecommons.org/licenses/by/4.0/](https://creativecommons.org/licenses/by/4.0/)
-
-
+© Dan Bousfield. CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
