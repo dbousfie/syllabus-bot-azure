@@ -9,6 +9,17 @@
       font-family: 'Lato', sans-serif;
       margin: 2rem;
     }
+    #syllabusAssistantNotice {
+      max-width: 800px;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      background: #f9f9f9;
+      line-height: 1.45;
+    }
+    #syllabusAssistantNotice p {
+      margin: 0;
+    }
     textarea {
       font-family: monospace;
       width: 100%;
@@ -23,7 +34,7 @@
       max-width: 600px;
     }
     #feedback {
-      margin-top: 0.5rem;
+      margin-top: 1rem;
       max-width: 600px;
       font-size: 0.95rem;
     }
@@ -35,39 +46,73 @@
       border: 1px solid #999;
       background: white;
     }
-    #feedback button:hover {
+    #feedback button:hover:not(:disabled) {
       background: #eee;
+    }
+    #feedback button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+    #feedbackStatus {
+      display: block;
+      margin-top: 0.5rem;
     }
   </style>
 </head>
 <body>
+  <section id="syllabusAssistantNotice">
+    <p>This course offers an optional Syllabus Assistant that answers your syllabus questions; using it is voluntary and not graded. Your questions are recorded anonymously (no name, student number, or login) and sent to Western's secure AI service (Microsoft Azure OpenAI) to generate answers. Your instructor reviews these anonymous questions during the course to improve the syllabus and the assistant, and anonymous questions, answers, and ratings may be used in research on teaching and learning, which may be published. Please don't type anything that could identify you. Because questions are anonymous and no session is kept, a question can't be withdrawn after you submit it. Your use has no effect on your grades or standing, and your instructor cannot tell who took part. <a href="#">Read the full information letter here</a></p>
+  </section>
+
   <h2>Syllabus Query Page - for questions about the course and things relating to the syllabus</h2>
   <form id="queryForm">
     <textarea name="query" id="query" rows="5" cols="60" placeholder="Type your question here..."></textarea><br />
     <button type="submit">Submit</button>
   </form>
+
   <h3>Response:</h3>
-  <h5>All queries and responses are anonymously recorded by qualtrics for feedback, research and improvement.</h5>
+  <h5>All queries and responses are anonymously recorded by Qualtrics for feedback, research, and improvement.</h5>
   <pre id="response"></pre>
-  <div id="feedback"></div>
+
+  <div id="feedback" aria-live="polite">
+    <span>Was this helpful? </span>
+    <button type="button" data-feedback="helpful" disabled>Yes</button>
+    <button type="button" data-feedback="not_helpful" disabled>No</button>
+    <span id="feedbackStatus">Submit a question first; feedback buttons will activate after a response appears.</span>
+  </div>
 
   <script>
     // CHANGE THIS to your bot's Cloudflare worker URL
-    const WORKER_URL = "https://syllabusazure.danbousfield.workers.dev/";
+    const WORKER_URL = "https://syllabusbot.danbousfield.workers.dev/";
 
     const form = document.getElementById("queryForm");
     const responseBox = document.getElementById("response");
     const feedbackBox = document.getElementById("feedback");
+    const feedbackStatus = document.getElementById("feedbackStatus");
+    const feedbackButtons = feedbackBox.querySelectorAll("button[data-feedback]");
 
     let lastQuery = "";
     let lastResponse = "";
 
+    feedbackButtons.forEach((button) => {
+      button.addEventListener("click", () => sendFeedback(button.dataset.feedback));
+    });
+
+    function setFeedbackButtonsEnabled(enabled) {
+      feedbackButtons.forEach((button) => {
+        button.disabled = !enabled;
+      });
+    }
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       responseBox.textContent = "Loading...";
-      feedbackBox.innerHTML = "";
+      feedbackStatus.textContent = "";
+      setFeedbackButtonsEnabled(false);
+
       const query = document.getElementById("query").value;
       lastQuery = query;
+      lastResponse = "";
 
       try {
         const res = await fetch(WORKER_URL, {
@@ -78,24 +123,24 @@
         const text = await res.text();
         responseBox.textContent = text;
         lastResponse = text;
-        showFeedbackButtons();
+        feedbackStatus.textContent = "";
+        setFeedbackButtonsEnabled(true);
       } catch (err) {
         responseBox.textContent = "Error contacting server.";
+        feedbackStatus.textContent = "Feedback is available after a response is received.";
+        setFeedbackButtonsEnabled(false);
       }
     });
 
-    function showFeedbackButtons() {
-      feedbackBox.innerHTML =
-        '<span>Was this helpful? </span>' +
-        '<button data-feedback="helpful">👍 Yes</button>' +
-        '<button data-feedback="not_helpful">👎 No</button>';
-      feedbackBox.querySelectorAll("button").forEach(b => {
-        b.addEventListener("click", () => sendFeedback(b.dataset.feedback));
-      });
-    }
-
     async function sendFeedback(value) {
-      feedbackBox.textContent = "Sending...";
+      if (!lastQuery || !lastResponse) {
+        feedbackStatus.textContent = "Submit a question first; feedback is available after a response appears.";
+        return;
+      }
+
+      feedbackStatus.textContent = "Sending...";
+      setFeedbackButtonsEnabled(false);
+
       try {
         await fetch(WORKER_URL, {
           method: "POST",
@@ -106,9 +151,10 @@
             feedback: value,
           }),
         });
-        feedbackBox.textContent = "Thanks for your feedback!";
+        feedbackStatus.textContent = "Thanks for your feedback.";
       } catch {
-        feedbackBox.textContent = "Could not send feedback.";
+        feedbackStatus.textContent = "Could not send feedback.";
+        setFeedbackButtonsEnabled(true);
       }
     }
   </script>
