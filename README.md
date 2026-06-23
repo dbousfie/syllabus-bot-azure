@@ -38,7 +38,7 @@ In the worker's page → **Settings** → **Variables and Secrets** → **+ Add*
 | `AZURE_OPENAI_KEY` | Secret | yes | Your Azure OpenAI API key |
 | `AZURE_ENDPOINT` | Text | yes | e.g., `https://chatbot-api-western.openai.azure.com` |
 | `AZURE_DEPLOYMENT_NAME` | Text | yes | The deployment name in your Azure resource (e.g., `gpt-4.1-mini`) |
-| `AZURE_API_VERSION` | Text | optional | Defaults to `2024-04-01-preview` |
+| `AZURE_API_VERSION` | Text | yes | e.g. `2025-04-01-preview` |
 | `SYLLABUS_URL` | Text | yes | Raw GitHub URL of this repo's syllabus file |
 | `COURSE_PAGE_URL` | Text | yes | Public course web page; appears at the bottom of every response |
 | `QUALTRICS_API_TOKEN` | Secret | for logging | |
