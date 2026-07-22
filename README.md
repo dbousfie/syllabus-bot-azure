@@ -43,7 +43,7 @@ In the worker's page → **Settings** → **Variables and Secrets** → **+ Add*
 | `COURSE_PAGE_URL` | Text | yes | Public course web page; appears at the bottom of every response |
 | `QUALTRICS_API_TOKEN` | Secret | for logging | |
 | `QUALTRICS_SURVEY_ID` | Text | for logging | starts with `SV_` |
-| `QUALTRICS_DATACENTER` | Text | for logging | e.g., `uwo.eu` |
+| `QUALTRICS_DATACENTER` | Text | for logging | e.g., `fra1` |
 
 For `SYLLABUS_URL`: open the syllabus file in your repo on GitHub, click the **Raw** button, copy the URL from your browser. The worker accepts `.md` or `.txt` — whatever the URL points to.
 
